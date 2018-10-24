@@ -431,7 +431,7 @@ CClink = $(CC)
 # dlopen(), dlsym(), dlclose(), i.e. pythonX.Y.so must be available
 # However, this may still cause problems, such as "import termios" failing.
 # Build two separate versions of Vim in that case.
-#CONF_OPT_PYTHON = --enable-pythoninterp
+CONF_OPT_PYTHON = --enable-pythoninterp
 #CONF_OPT_PYTHON = --enable-pythoninterp=dynamic
 #CONF_OPT_PYTHON3 = --enable-python3interp
 #CONF_OPT_PYTHON3 = --enable-python3interp=dynamic
