@@ -76,7 +76,7 @@
 #  include <gdk/gdkkeysyms.h>
 # endif
 # include <gdk/gdk.h>
-# ifdef WIN3264
+# ifdef MSWIN
 #  include <gdk/gdkwin32.h>
 # else
 #  include <gdk/gdkx.h>
@@ -925,7 +925,7 @@ gui_mch_destroy_menu(vimmenu_T *menu)
 	g_object_ref(menu->id);
 
     /* Workaround for a spurious gtk warning in Ubuntu: "Trying to remove
-     * a child that doesn't believe we're it's parent."
+     * a child that doesn't believe we're its parent."
      * Remove widget from gui.menubar before destroying it. */
     if (menu->id != NULL && gui.menubar != NULL
 			    && gtk_widget_get_parent(menu->id) == gui.menubar)

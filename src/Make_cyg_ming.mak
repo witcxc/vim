@@ -65,9 +65,6 @@ CROSS=no
 ICONV=yes
 GETTEXT=yes
 
-# Set to yes to include multibyte support.
-MBYTE=yes
-
 # Set to yes to include IME support.
 IME=yes
 DYNAMIC_IME=yes
@@ -494,7 +491,7 @@ endif # RUBY
 
 # See feature.h for a list of options.
 # Any other defines can be included here.
-DEF_GUI=-DFEAT_GUI_W32 -DFEAT_CLIPBOARD
+DEF_GUI=-DFEAT_GUI_MSWIN -DFEAT_CLIPBOARD
 DEFINES=-DWIN32 -DWINVER=$(WINVER) -D_WIN32_WINNT=$(WINVER) \
 	-DHAVE_PATHDEF -DFEAT_$(FEATURES) -DHAVE_STDINT_H
 ifeq ($(ARCH),x86-64)
@@ -698,7 +695,9 @@ GUIOBJ =  $(OUTDIR)/gui.o $(OUTDIR)/gui_w32.o $(OUTDIR)/gui_beval.o $(OUTDIR)/os
 CUIOBJ = $(OUTDIR)/iscygpty.o
 OBJ = \
 	$(OUTDIR)/arabic.o \
+	$(OUTDIR)/autocmd.o \
 	$(OUTDIR)/beval.o \
+	$(OUTDIR)/blob.o \
 	$(OUTDIR)/blowfish.o \
 	$(OUTDIR)/buffer.o \
 	$(OUTDIR)/charset.o \
@@ -715,12 +714,13 @@ OBJ = \
 	$(OUTDIR)/ex_docmd.o \
 	$(OUTDIR)/ex_eval.o \
 	$(OUTDIR)/ex_getln.o \
-	$(OUTDIR)/farsi.o \
 	$(OUTDIR)/fileio.o \
+	$(OUTDIR)/findfile.o \
 	$(OUTDIR)/fold.o \
 	$(OUTDIR)/getchar.o \
 	$(OUTDIR)/hardcopy.o \
 	$(OUTDIR)/hashtab.o \
+	$(OUTDIR)/indent.o \
 	$(OUTDIR)/json.o \
 	$(OUTDIR)/list.o \
 	$(OUTDIR)/main.o \
@@ -746,11 +746,13 @@ OBJ = \
 	$(OUTDIR)/screen.o \
 	$(OUTDIR)/search.o \
 	$(OUTDIR)/sha256.o \
+	$(OUTDIR)/sign.o \
 	$(OUTDIR)/spell.o \
 	$(OUTDIR)/spellfile.o \
 	$(OUTDIR)/syntax.o \
 	$(OUTDIR)/tag.o \
 	$(OUTDIR)/term.o \
+	$(OUTDIR)/textprop.o \
 	$(OUTDIR)/ui.o \
 	$(OUTDIR)/undo.o \
 	$(OUTDIR)/userfunc.o \
@@ -909,10 +911,6 @@ OBJ += $(OUTDIR)/if_ole.o
 USE_STDCPLUS = yes
 endif
 
-ifeq (yes, $(MBYTE))
-DEFINES += -DFEAT_MBYTE
-endif
-
 ifeq (yes, $(IME))
 DEFINES += -DFEAT_MBYTE_IME
 ifeq (yes, $(DYNAMIC_IME))
@@ -933,7 +931,8 @@ endif
 ifeq (yes, $(USE_STDCPLUS))
 LINK = $(CXX)
 ifeq (yes, $(STATIC_STDCPLUS))
-LIB += -static-libstdc++ -static-libgcc
+#LIB += -static-libstdc++ -static-libgcc
+LIB += -Wl,-Bstatic -lstdc++ -lgcc -Wl,-Bdynamic
 endif
 else
 LINK = $(CC)
@@ -982,11 +981,7 @@ GvimExt/gvimext.dll: GvimExt/gvimext.cpp GvimExt/gvimext.rc GvimExt/gvimext.h
 	$(MAKE) -C GvimExt -f Make_ming.mak CROSS=$(CROSS) CROSS_COMPILE=$(CROSS_COMPILE) CXX='$(CXX)' STATIC_STDCPLUS=$(STATIC_STDCPLUS)
 
 tags: notags
-	$(CTAGS) *.c *.cpp *.h
-ifdef PERL
-	$(CTAGS) --append=yes auto$(DIRSLASH)if_perl.c
-endif
-
+	$(CTAGS) $(TAGS_FILES)
 
 notags:
 	-$(DEL) tags
@@ -1009,7 +1004,7 @@ endif
 	$(MAKE) -C tee clean
 
 ###########################################################################
-INCL =	vim.h alloc.h arabic.h ascii.h ex_cmds.h farsi.h feature.h globals.h \
+INCL =	vim.h alloc.h arabic.h ascii.h ex_cmds.h feature.h globals.h \
 	keymap.h macros.h option.h os_dos.h os_win32.h proto.h regexp.h \
 	spell.h structs.h term.h beval.h $(NBDEBUG_INCL)
 GUI_INCL = gui.h
@@ -1089,6 +1084,9 @@ $(OUTDIR)/regexp.o:	regexp.c regexp_nfa.c $(INCL)
 
 $(OUTDIR)/terminal.o:	terminal.c $(INCL) $(TERM_DEPS)
 	$(CC) -c $(CFLAGS) terminal.c -o $(OUTDIR)/terminal.o
+
+$(OUTDIR)/textprop.o:	textprop.c $(INCL)
+	$(CC) -c $(CFLAGS) textprop.c -o $(OUTDIR)/textprop.o
 
 
 CCCTERM = $(CC) -c $(CFLAGS) -Ilibvterm/include -DINLINE="" \

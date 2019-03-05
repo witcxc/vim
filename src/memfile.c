@@ -245,7 +245,7 @@ mf_close(memfile_T *mfp, int del_file)
     if (mfp->mf_fd >= 0)
     {
 	if (close(mfp->mf_fd) < 0)
-	    EMSG(_(e_swapclose));
+	    emsg(_(e_swapclose));
     }
     if (del_file && mfp->mf_fname != NULL)
 	mch_remove(mfp->mf_fname);
@@ -291,7 +291,7 @@ mf_close_file(
     }
 
     if (close(mfp->mf_fd) < 0)			/* close the file */
-	EMSG(_(e_swapclose));
+	emsg(_(e_swapclose));
     mfp->mf_fd = -1;
 
     if (mfp->mf_fname != NULL)
@@ -480,7 +480,7 @@ mf_put(
     flags = hp->bh_flags;
 
     if ((flags & BH_LOCKED) == 0)
-	IEMSG(_("E293: block was not locked"));
+	iemsg(_("E293: block was not locked"));
     flags &= ~BH_LOCKED;
     if (dirty)
     {
@@ -600,7 +600,7 @@ mf_sync(memfile_T *mfp, int flags)
 	 */
 	if (STRCMP(p_sws, "fsync") == 0)
 	{
-	    if (fsync(mfp->mf_fd))
+	    if (vim_fsync(mfp->mf_fd))
 		status = FAIL;
 	}
 	else
@@ -617,17 +617,17 @@ mf_sync(memfile_T *mfp, int flags)
 #ifdef VMS
 	if (STRCMP(p_sws, "fsync") == 0)
 	{
-	    if (fsync(mfp->mf_fd))
+	    if (vim_fsync(mfp->mf_fd))
 		status = FAIL;
 	}
 #endif
-#ifdef WIN32
+#ifdef MSWIN
 	if (_commit(mfp->mf_fd))
 	    status = FAIL;
 #endif
 #ifdef AMIGA
 # if defined(__AROS__) || defined(__amigaos4__)
-	if (fsync(mfp->mf_fd) != 0)
+	if (vim_fsync(mfp->mf_fd) != 0)
 	    status = FAIL;
 # else
 	/*
@@ -1040,7 +1040,7 @@ mf_write(memfile_T *mfp, bhdr_T *hp)
 	     * space becomes available.
 	     */
 	    if (!did_swapwrite_msg)
-		EMSG(_("E297: Write error in swap file"));
+		emsg(_("E297: Write error in swap file"));
 	    did_swapwrite_msg = TRUE;
 	    return FAIL;
 	}
@@ -1256,7 +1256,7 @@ mf_do_open(
     if ((flags & O_CREAT) && mch_lstat((char *)mfp->mf_fname, &sb) >= 0)
     {
 	mfp->mf_fd = -1;
-	EMSG(_("E300: Swap file already exists (symlink attack?)"));
+	emsg(_("E300: Swap file already exists (symlink attack?)"));
     }
     else
 #endif
@@ -1265,7 +1265,7 @@ mf_do_open(
 	 * try to open the file
 	 */
 	flags |= O_EXTRA | O_NOFOLLOW;
-#ifdef WIN32
+#ifdef MSWIN
 	/* Prevent handle inheritance that cause problems with Cscope
 	 * (swap file may not be deleted if cscope connection was open after
 	 * the file) */

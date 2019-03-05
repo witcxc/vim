@@ -783,6 +783,20 @@ func Test_search_cmdline_incsearch_highlight_attr()
   bwipe!
 endfunc
 
+func Test_incsearch_cmdline_modifier()
+  if !exists('+incsearch')
+    return
+  endif
+  call test_override("char_avail", 1)
+  new
+  call setline(1, ['foo'])
+  set incsearch
+  " Test that error E14 does not occur in parsing command modifier.
+  call feedkeys("V:tab", 'tx')
+
+  call Incsearch_cleanup()
+endfunc
+
 func Test_incsearch_scrolling()
   if !CanRunVimInTerminal()
     return
@@ -967,6 +981,30 @@ func Test_incsearch_substitute_dump()
   call delete('Xis_subst_script')
 endfunc
 
+func Test_incsearch_with_change()
+  if !has('timers') || !exists('+incsearch') || !CanRunVimInTerminal()
+    return
+  endif
+
+  call writefile([
+	\ 'set incsearch hlsearch scrolloff=0',
+	\ 'call setline(1, ["one", "two ------ X", "three"])',
+	\ 'call timer_start(200, { _ -> setline(2, "x")})',
+	\ ], 'Xis_change_script')
+  let buf = RunVimInTerminal('-S Xis_change_script', {'rows': 9, 'cols': 70})
+  " Give Vim a chance to redraw to get rid of the spaces in line 2 caused by
+  " the 'ambiwidth' check.
+  sleep 300m
+
+  " Highlight X, it will be deleted by the timer callback.
+  call term_sendkeys(buf, ':%s/X')
+  call VerifyScreenDump(buf, 'Test_incsearch_change_01', {})
+  call term_sendkeys(buf, "\<Esc>")
+
+  call StopVimInTerminal(buf)
+  call delete('Xis_change_script')
+endfunc
+
 " Similar to Test_incsearch_substitute_dump() for :sort
 func Test_incsearch_sort_dump()
   if !exists('+incsearch')
@@ -1113,9 +1151,6 @@ endfunc
 
 " Test for search('multi-byte char', 'bce')
 func Test_search_multibyte()
-  if !has('multi_byte')
-    return
-  endif
   let save_enc = &encoding
   set encoding=utf8
   enew!
@@ -1141,4 +1176,75 @@ func Test_search_sentence()
   call assert_fails("/", 'E486')
   /\%'(
   /
+endfunc
+
+" Test that there is no crash when there is a last search pattern but no last
+" substitute pattern.
+func Test_no_last_substitute_pat()
+  " Use viminfo to set the last search pattern to a string and make the last
+  " substitute pattern the most recent used and make it empty (NULL).
+  call writefile(['~MSle0/bar', '~MSle0~&'], 'Xviminfo')
+  rviminfo! Xviminfo
+  call assert_fails('normal n', 'E35:')
+
+  call delete('Xviminfo')
+endfunc
+
+func Test_search_Ctrl_L_combining()
+  " Make sure, that Ctrl-L works correctly with combining characters.
+  " It uses an artificial example of an 'a' with 4 combining chars:
+    " 'a' U+0061 Dec:97 LATIN SMALL LETTER A &#x61; /\%u61\Z "\u0061" 
+    " ' ̀' U+0300 Dec:768 COMBINING GRAVE ACCENT &#x300; /\%u300\Z "\u0300"
+    " ' ́' U+0301 Dec:769 COMBINING ACUTE ACCENT &#x301; /\%u301\Z "\u0301"
+    " ' ̇' U+0307 Dec:775 COMBINING DOT ABOVE &#x307; /\%u307\Z "\u0307"
+    " ' ̣' U+0323 Dec:803 COMBINING DOT BELOW &#x323; /\%u323 "\u0323" 
+  " Those should also appear on the commandline
+  if !exists('+incsearch')
+    return
+  endif
+  call Cmdline3_prep()
+  1
+  let bufcontent = ['', 'Miạ̀́̇m']
+  call append('$', bufcontent)
+  call feedkeys("/Mi\<c-l>\<c-l>\<cr>", 'tx')
+  call assert_equal(5, line('.'))
+  call assert_equal(bufcontent[1], @/)
+  call Incsearch_cleanup()
+endfunc
+
+func Test_large_hex_chars1()
+  " This used to cause a crash, the character becomes an NFA state.
+  try
+    /\%Ufffffc23
+  catch
+    call assert_match('E678:', v:exception)
+  endtry
+  try
+    set re=1
+    /\%Ufffffc23
+  catch
+    call assert_match('E678:', v:exception)
+  endtry
+  set re&
+endfunc
+
+func Test_large_hex_chars2()
+  " This used to cause a crash, the character becomes an NFA state.
+  try
+    /[\Ufffffc1f]
+  catch
+    call assert_match('E486:', v:exception)
+  endtry
+  try
+    set re=1
+    /[\Ufffffc1f]
+  catch
+    call assert_match('E486:', v:exception)
+  endtry
+  set re&
+endfunc
+
+func Test_one_error_msg()
+  " This  was also giving an internal error
+  call assert_fails('call search(" \\((\\v[[=P=]]){185}+             ")', 'E871:')
 endfunc

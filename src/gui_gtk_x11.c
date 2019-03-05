@@ -86,7 +86,7 @@ extern void bonobo_dock_item_set_behavior(BonoboDockItem *dock_item, BonoboDockI
 #  include <gdk/gdkkeysyms.h>
 # endif
 # include <gdk/gdk.h>
-# ifdef WIN3264
+# ifdef MSWIN
 #  include <gdk/gdkwin32.h>
 # else
 #  include <gdk/gdkx.h>
@@ -1664,7 +1664,7 @@ gui_mch_early_init_check(int give_message)
     {
 	gui.dying = TRUE;
 	if (give_message)
-	    EMSG(_((char *)e_opendisp));
+	    emsg(_((char *)e_opendisp));
 	return FAIL;
     }
     return OK;
@@ -1710,7 +1710,7 @@ gui_mch_init_check(void)
     if (!gtk_init_check(&gui_argc, &gui_argv))
     {
 	gui.dying = TRUE;
-	EMSG(_((char *)e_opendisp));
+	emsg(_((char *)e_opendisp));
 	return FAIL;
     }
 
@@ -3337,9 +3337,7 @@ create_tabline_menu(void)
     GtkWidget *menu;
 
     menu = gtk_menu_new();
-    if (first_tabpage->tp_next != NULL)
-	add_tabline_menu_item(menu, (char_u *)_("Close tab"),
-							  TABLINE_MENU_CLOSE);
+    add_tabline_menu_item(menu, (char_u *)_("Close tab"), TABLINE_MENU_CLOSE);
     add_tabline_menu_item(menu, (char_u *)_("New tab"), TABLINE_MENU_NEW);
     add_tabline_menu_item(menu, (char_u *)_("Open Tab..."), TABLINE_MENU_OPEN);
 
@@ -4284,7 +4282,7 @@ mainwin_destroy_cb(GObject *object UNUSED, gpointer data UNUSED)
  * hints (and thus the required size from -geom), but that after that we
  * put the hints back to normal (the actual minimum size) so we may
  * subsequently be resized smaller.  GtkSocket (the parent end) uses the
- * plug's window 'min hints to set *it's* minimum size, but that's also the
+ * plug's window 'min hints to set *its* minimum size, but that's also the
  * only way we have of making ourselves bigger (by set lines/columns).
  * Thus set hints at start-up to ensure correct init. size, then a
  * second after the final attempt to reset the real minimum hints (done by
@@ -5249,7 +5247,7 @@ gui_mch_get_font(char_u *name, int report_error)
     if (font == NULL)
     {
 	if (report_error)
-	    EMSG2(_((char *)e_font), name);
+	    semsg(_((char *)e_font), name);
 	return NULL;
     }
 
@@ -6319,10 +6317,11 @@ gui_mch_wait_for_chars(long wtime)
 
     timed_out = FALSE;
 
-    /* this timeout makes sure that we will return if no characters arrived in
-     * time */
-    if (wtime > 0)
-	timer = timeout_add(wtime, input_timer_cb, &timed_out);
+    // This timeout makes sure that we will return if no characters arrived in
+    // time. If "wtime" is zero just use one.
+    if (wtime >= 0)
+	timer = timeout_add(wtime == 0 ? 1L : wtime,
+						   input_timer_cb, &timed_out);
     else
 	timer = 0;
 
@@ -6739,11 +6738,13 @@ clip_mch_set_selection(VimClipboard *cbd UNUSED)
 {
 }
 
+#if (defined(FEAT_XCLIPBOARD) && defined(USE_SYSTEM)) || defined(PROTO)
     int
 clip_gtk_owner_exists(VimClipboard *cbd)
 {
     return gdk_selection_owner_get(cbd->gtk_sel_atom) != NULL;
 }
+#endif
 
 
 #if defined(FEAT_MENU) || defined(PROTO)
@@ -7014,7 +7015,7 @@ gui_mch_drawsign(int row, int col, int typenr)
 		 (double)(MIN(height, SIGN_HEIGHT))) < 1.15)
 	    {
 		/* Change the aspect ratio by at most 15% to fill the
-		 * available space completly. */
+		 * available space completely. */
 		height = (double)SIGN_HEIGHT * SIGN_ASPECT / aspect;
 		height = MIN(height, SIGN_HEIGHT);
 	    }
@@ -7140,7 +7141,7 @@ gui_mch_register_sign(char_u *signfile)
 	{
 	    /* The error message is already translated and will be more
 	     * descriptive than anything we could possibly do ourselves. */
-	    EMSG2("E255: %s", message);
+	    semsg("E255: %s", message);
 
 	    if (input_conv.vc_type != CONV_NONE)
 		vim_free(message);
