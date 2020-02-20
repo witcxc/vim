@@ -3,6 +3,10 @@
             --enable-multibyte \
             --enable-rubyinterp=yes \
             --enable-pythoninterp=yes \
+            --with-python-command=/usr/local/bin/python \
+            --enable-python3interp==yes \
+            --with-python3-command=/usr/local/bin/python3.7 \
+            --with-python3-config-dir=/usr/local/opt/python/Frameworks/Python.framework/Versions/3.7/lib/python3.7/config-3.7m-darwin \
             --enable-perlinterp=yes \
             --enable-luainterp=yes \
             --enable-cscope \
