@@ -7,4 +7,6 @@
             --enable-luainterp=yes \
             --enable-gui=gtk2 \
             --enable-cscope \
+            --with-lua-prefix=/usr/local/Cellar/luajit/2.0.5/ \
+            --with-luajit \
             --prefix=/usr/local
